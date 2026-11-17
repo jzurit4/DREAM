@@ -8,11 +8,8 @@ function Navbar() {
   const navigate = useNavigate();
 
   const cerrarSesion = () => {
-    logoutUser();
-    localStorage.removeItem('userLogged');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    navigate('/');
+   logoutUser(); 
+   navigate('/'); 
   };
 
   return (

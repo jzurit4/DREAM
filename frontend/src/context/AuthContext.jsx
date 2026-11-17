@@ -1,34 +1,40 @@
 import { createContext, useContext, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { apiAuth } from '../utils/api';
 
 const AuthContext = createContext(null);
 
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'admin123';
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useLocalStorage('pz_user', null);
-  const [admin, setAdmin] = useLocalStorage('pz_admin', false);
+  const [session, setSession] = useLocalStorage('pz_session', null); // { token, user }
 
-  const loginUser = useCallback(({ email, nombre }) => {
-    setUser({ email, nombre: nombre || email.split('@')[0] });
-  }, [setUser]);
+  const user = session?.user ?? null;
+  const admin = session?.user?.role === 'ROLE_ADMIN';
 
-  const logoutUser = useCallback(() => setUser(null), [setUser]);
+  const login = useCallback(async (identifier, password) => {
+    const data = await apiAuth('/api/auth/login', {
+      method: 'POST',
+      body: { identifier, password },
+    });
+    setSession(data);   // token, user: { id, nombre, email, rol}
+    return data.user;
+  }, [setSession]);
 
-  const loginAdmin = useCallback((usuario, contrasenia) => {
-    if (usuario === ADMIN_USER && contrasenia === ADMIN_PASS) {
-      setAdmin(true);
-      return true;
-    }
-    return false;
-  }, [setAdmin]);
+  const loginUser  = useCallback(({ email, password }) => login(email, password), [login]);
+  const loginAdmin = useCallback(async (usuario, contrasenia) => {
+    const u = await login(usuario, contrasenia);
+    return u.role === 'ROLE_ADMIN';
+  }, [login]);
 
-  const logoutAdmin = useCallback(() => setAdmin(false), [setAdmin]);
+  const logout = useCallback(() => setSession(null), [setSession]);
 
   return (
     <AuthContext.Provider
-      value={{ user, admin, loginUser, logoutUser, loginAdmin, logoutAdmin }}
+      value={{
+        user, admin,
+        token: session?.token ?? null,
+        loginUser, loginAdmin,
+        logoutUser: logout, logoutAdmin: logout,
+      }}
     >
       {children}
     </AuthContext.Provider>
